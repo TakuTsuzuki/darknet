@@ -447,6 +447,8 @@ int main(int argc, char **argv)
         predict_classifier("cfg/imagenet1k.data", argv[2], argv[3], argv[4], 5);
     } else if (0 == strcmp(argv[1], "classifier")){
         run_classifier(argc, argv);
+    } else if (0 == strcmp(argv[1], "classifier_bbb")){
+        run_classifier_bbb(argc, argv); // ADDED for BAYES
     } else if (0 == strcmp(argv[1], "regressor")){
         run_regressor(argc, argv);
     } else if (0 == strcmp(argv[1], "isegmenter")){
