@@ -187,18 +187,23 @@ void update_bayesconnected_layer(layer l, update_args a)
     float decay = a.decay;
     int batch = a.batch;
     // self.b -= l * self.grad_b
-    axpy_cpu(l.outputs, learning_rate/batch, l.bias_updates, 1, l.biases, 1);
+    axpy_cpu(l.outputs, learning_rate/batch, l.bias_updates_mu, 1, l.biases_mu, 1);
+    axpy_cpu(l.outputs, learning_rate/batch, l.bias_updates_rho, 1, l.biases_rho, 1);
     // self.grad_b = momentum * self.grad_b
-    scal_cpu(l.outputs, momentum, l.bias_updates, 1);
+    scal_cpu(l.outputs, momentum, l.bias_updates_mu, 1);
+    scal_cpu(l.outputs, momentum, l.bias_updates_rho, 1);
 
     if(l.batch_normalize){
         axpy_cpu(l.outputs, learning_rate/batch, l.scale_updates, 1, l.scales, 1);
         scal_cpu(l.outputs, momentum, l.scale_updates, 1);
     }
 
-    axpy_cpu(l.inputs*l.outputs, -decay*batch, l.weights, 1, l.weight_updates, 1);
-    axpy_cpu(l.inputs*l.outputs, learning_rate/batch, l.weight_updates, 1, l.weights, 1);
-    scal_cpu(l.inputs*l.outputs, momentum, l.weight_updates, 1);
+    axpy_cpu(l.inputs*l.outputs, -decay*batch, l.weights_mu, 1, l.weight_updates_mu, 1);
+    axpy_cpu(l.inputs*l.outputs, -decay*batch, l.weights_rho, 1, l.weight_updates_rho, 1);
+    axpy_cpu(l.inputs*l.outputs, learning_rate/batch, l.weight_updates_mu, 1, l.weights_mu, 1);
+    axpy_cpu(l.inputs*l.outputs, learning_rate/batch, l.weight_updates_rho, 1, l.weights_rho, 1);
+    scal_cpu(l.inputs*l.outputs, momentum, l.weight_updates_mu, 1);
+    scal_cpu(l.inputs*l.outputs, momentum, l.weight_updates_rho, 1);
 }
 
 void forward_bayesconnected_layer(layer l, network net)
