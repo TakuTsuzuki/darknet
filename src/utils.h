@@ -49,5 +49,8 @@ float sec(clock_t clocks);
 void print_statistics(float *a, int n);
 int int_index(int *a, int val, int n);
 
+void init_arrayzero(float *array, int N); //ADDED FOR BBB 
+void init_arrayuniform(float *array, int N, float scale); //ADDED FOR BBB 
+
 #endif
 

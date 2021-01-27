@@ -53,6 +53,21 @@ void free_layer(layer l)
     if(l.h_cpu)              free(l.h_cpu);
     if(l.binary_input)       free(l.binary_input);
 
+    // bayes by backprop
+    if(l.weights_mu) free(l.weights_mu); 
+    if(l.weights_rho) free(l.weights_rho); 
+    if(l.biases_mu) free(l.biases_mu); 
+    if(l.biases_rho) free(l.biases_rho); 
+    if(l.weight_updates_mu) free(l.weight_updates); 
+    if(l.weight_updates_rho) free(l.weight_updates_rho); 
+    if(l.bias_updates_mu) free(l.bias_updates_mu); 
+    if(l.bias_updates_rho) free(l.bias_updates_rho); 
+    if(l.weight_prior_updates) free(l.weight_prior_updates); 
+    if(l.bias_prior_updates) free(l.bias_prior_updates); 
+    if(l.weights_eps) free(l.weights_eps); 
+    if(l.biases_eps) free(l.biases_eps); 
+} 
+
 #ifdef GPU
     if(l.indexes_gpu)           cuda_free((float *)l.indexes_gpu);
 

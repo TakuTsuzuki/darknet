@@ -724,3 +724,18 @@ float **one_hot_encode(float *a, int n, int k)
     return t;
 }
 
+// ADDED FOR BBB 
+void init_arrayzero(float *array, int N) 
+{ 
+    for (int i = 0; i < N; i++){ 
+        array[i] = 0; 
+    } 
+} 
+
+void init_arrayuniform(float *array, int N, float scale) 
+{ 
+    for (int i = 0; i < N; i++){ 
+        array[i] = scale*rand_uniform(-1, 1); 
+    } 
+} 
+

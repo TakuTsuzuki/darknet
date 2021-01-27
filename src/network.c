@@ -9,6 +9,7 @@
 
 #include "crop_layer.h"
 #include "connected_layer.h"
+#include "bayesconnected_layer.h" // added for bbb
 #include "gru_layer.h"
 #include "rnn_layer.h"
 #include "crnn_layer.h"
@@ -132,6 +133,8 @@ char *get_layer_string(LAYER_TYPE a)
             return "deconvolutional";
         case CONNECTED:
             return "connected";
+        case BAYESCONNECTED: // ADDED for Bayes by backprop 
+            return "bayesconnected"; 
         case RNN:
             return "rnn";
         case GRU:
@@ -183,6 +186,59 @@ network *make_network(int n)
     net->t    = calloc(1, sizeof(int));
     net->cost = calloc(1, sizeof(float));
     return net;
+}
+
+void sampling_network(network *netp, bool sampling)
+{
+    /*
+        sampling each weight and bias
+
+        w = w_mu + w_rho * eps where eps ~ N(0, 1)
+        b = b_mu + b_rho * eps where eps ~ N(0, 1)
+    */
+    float eps;
+    network net = *netp;
+    int i;
+    for(i = 0; i < net.n; ++i){
+        net.index = i;
+        layer l = net.layers[i];
+        if (sampling == true) {
+            for (int i = 0; i < l.inputs * l.outputs; i++) {
+                eps = rand_normal();
+                l.weights[i] = l.weights_mu[i] + log1pf(expf(l.weights_rho[i])) * eps;
+                l.weights_eps[i] = eps;
+            }
+            for (int i = 0; i < l.outputs; i++) {
+                eps = rand_normal();
+                l.biases[i] = l.biases_mu[i] + log1pf(expf(l.weights_rho[i])) * eps;
+                l.biases_eps[i] = eps;
+            }
+        } else {
+            for (int i = 0; i < l.inputs * l.outputs; i++) {
+                l.weights[i] = l.weights_mu[i];
+            }
+            for (int i = 0; i < l.outputs; i++) {
+                l.biases[i] = l.biases_mu[i];
+            }
+        }
+
+        // Calculate log_prior and variational_log_posteior
+        l.log_prior = 0;
+        l.log_variational_posterior = 0;
+        for (int i = 0; i < l.inputs * l.outputs; i++) {
+            l.log_prior += compute_log_prob_scale_mixture_gaussian(
+                &(l.weights_prior), l.weights[i]);
+            l.log_variational_posterior += _compute_log_prob_gaussian(
+                l.weights_mu[i], log1pf(expf(l.weights_rho[i])), l.weights[i]);
+        }
+
+        for (int i = 0; i < l.outputs; i++) {
+            l.log_prior += compute_log_prob_scale_mixture_gaussian(
+                &(l.biases_prior), l.biases[i]);
+            l.log_variational_posterior += _compute_log_prob_gaussian(
+                l.biases_mu[i], log1pf(expf(l.biases_rho[i])), l.biases[i]);
+        }        
+    }
 }
 
 void forward_network(network *netp)
@@ -297,6 +353,20 @@ float train_network_datum(network *net)
     return error;
 }
 
+float train_network_datum_bbb(network *net, bool sampling, int num_sample)
+{
+    *net->seen += net->batch;
+    net->train = 1;
+    for(int s = 0; s < num_sample; s++){
+        sampling_network(net, sampling);
+        forward_network(net);
+        backward_network(net);
+    }
+    float error = *net->cost;
+    if(((*net->seen)/net->batch)%net->subdivisions == 0) update_network(net);
+    return error;
+}
+
 float train_network_sgd(network *net, data d, int n)
 {
     int batch = net->batch;
@@ -326,6 +396,24 @@ float train_network(network *net, data d)
     }
     return (float)sum/(n*batch);
 }
+
+float train_network_bbb(network *net, data d, bool sampling, int num_sample)
+{
+    assert(d.X.rows % net->batch == 0);
+    int batch = net->batch;
+    int n = d.X.rows / batch;
+
+    int i;
+    float sum = 0;
+    for(i = 0; i < n; ++i){
+        get_next_batch(d, batch, i*batch, net->input, net->truth);
+        float err = train_network_datum_bbb(net, sampling, num_sample);
+        sum += err;
+    }
+    return (float)sum/(n*batch);
+}
+
+
 
 void set_temp_network(network *net, float t)
 {

@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <pthread.h>
+#include <stdbool.h>
 
 #ifdef GPU
     #define BLOCK 512
@@ -61,6 +62,7 @@ typedef enum {
     CONVOLUTIONAL,
     DECONVOLUTIONAL,
     CONNECTED,
+    BAYESCONNECTED, //ADD for Bayes By Backprop 
     MAXPOOL,
     SOFTMAX,
     DETECTION,
@@ -89,6 +91,24 @@ typedef enum {
     L2NORM,
     BLANK
 } LAYER_TYPE;
+
+// ADDED for Bayes By Backprop 
+typedef struct _Gaussian { 
+float mu; 
+float rho; 
+} Gaussian; 
+
+typedef struct _ScaleMixtureGaussian { 
+/* 
+p(x|mu1, rho1, mu2, rho2, alpha) = alpha * N(x|mu1, rho1) + (1 - alpha) 
+* N(x|mu2, rho2) 
+*/ 
+float mu1; 
+float sigma1; 
+float mu2; 
+float sigma2; 
+float alpha; 
+} ScaleMixtureGaussian; 
 
 typedef enum{
     SSE, MASKED, L1, SEG, SMOOTH,WGAN
@@ -119,6 +139,7 @@ struct layer{
     void (*forward)   (struct layer, struct network);
     void (*backward)  (struct layer, struct network);
     void (*update)    (struct layer, update_args);
+    void (*sampling)  (struct layer, bool sampling); // Bayes by BBB
     void (*forward_gpu)   (struct layer, struct network);
     void (*backward_gpu)  (struct layer, struct network);
     void (*update_gpu)    (struct layer, update_args);
@@ -265,6 +286,26 @@ struct layer{
     float * scale_m;
     float * scale_v;
 
+    // variables for Bayes By Backprop 
+    ScaleMixtureGaussian weights_prior; //重み事前分布 
+    ScaleMixtureGaussian biases_prior; //バイアス事前分布 
+
+    float * weights_mu; //重みガウス分布の平均  
+    float * weights_rho; //重みガウス分布の共分散  
+    float * biases_mu; //バイアス項の平均  
+    float * biases_rho; //バイアス項の共分散  
+    float * weight_updates_mu; //重みガウス分布の平均の勾配  
+    float * weight_updates_rho; //重みガウス分布の共分散の勾配  
+    float * bias_updates_mu; //バイアス項の平均の勾配  
+    float * bias_updates_rho; //バイアス項の共分散の勾配  
+    float * weight_prior_updates; //重みガウス分布の事前分布の勾配  
+    float * bias_prior_updates; //バイアス項の事前分布の勾配 
+    float * weights_eps; // for using sampling 
+    float * biases_eps; // for using sampling 
+
+    float log_prior;
+    float log_variational_posterior;
+    // end BBB
 
     float *z_cpu;
     float *r_cpu;
@@ -612,6 +653,7 @@ data select_data(data *orig, int *inds);
 void forward_network(network *net);
 void backward_network(network *net);
 void update_network(network *net);
+void sampling_network(network *net, bool sampling); // ADDED FOR BBB 
 
 
 float dot_cpu(int N, float *X, int INCX, float *Y, int INCY);
@@ -663,11 +705,16 @@ void scale_matrix(matrix m, float scale);
 matrix csv_to_matrix(char *filename);
 float *network_accuracies(network *net, data d, int n);
 float train_network_datum(network *net);
+float train_network_datum_bbb(network *net, bool sampling, int num_sample); //ADDED for BBB 
 image make_random_image(int w, int h, int c);
 
 void denormalize_connected_layer(layer l);
 void denormalize_convolutional_layer(layer l);
 void statistics_connected_layer(layer l);
+
+void denormalize_bayesconnected_layer(layer l); //ADDED for BBB 
+void statistics_bayesconnected_layer(layer l); //ADDED for BBB 
+
 void rescale_weights(layer l, float scale, float trans);
 void rgbgr_weights(layer l);
 image *get_weights(layer l);
@@ -762,6 +809,7 @@ void make_window(char *name, int w, int h, int fullscreen);
 
 void free_image(image m);
 float train_network(network *net, data d);
+float train_network_bbb(network *net, data d, bool sampling,int num_sample); // ADDED for BBB 
 pthread_t load_data_in_thread(load_args args);
 void load_data_blocking(load_args args);
 list *get_paths(char *filename);
