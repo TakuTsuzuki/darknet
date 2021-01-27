@@ -190,54 +190,12 @@ network *make_network(int n)
 
 void sampling_network(network *netp, bool sampling)
 {
-    /*
-        sampling each weight and bias
-
-        w = w_mu + w_rho * eps where eps ~ N(0, 1)
-        b = b_mu + b_rho * eps where eps ~ N(0, 1)
-    */
-    float eps;
     network net = *netp;
     int i;
     for(i = 0; i < net.n; ++i){
         net.index = i;
         layer l = net.layers[i];
-        if (sampling == true) {
-            for (int i = 0; i < l.inputs * l.outputs; i++) {
-                eps = rand_normal();
-                l.weights[i] = l.weights_mu[i] + log1pf(expf(l.weights_rho[i])) * eps;
-                l.weights_eps[i] = eps;
-            }
-            for (int i = 0; i < l.outputs; i++) {
-                eps = rand_normal();
-                l.biases[i] = l.biases_mu[i] + log1pf(expf(l.weights_rho[i])) * eps;
-                l.biases_eps[i] = eps;
-            }
-        } else {
-            for (int i = 0; i < l.inputs * l.outputs; i++) {
-                l.weights[i] = l.weights_mu[i];
-            }
-            for (int i = 0; i < l.outputs; i++) {
-                l.biases[i] = l.biases_mu[i];
-            }
-        }
-
-        // Calculate log_prior and variational_log_posteior
-        l.log_prior = 0;
-        l.log_variational_posterior = 0;
-        for (int i = 0; i < l.inputs * l.outputs; i++) {
-            l.log_prior += compute_log_prob_scale_mixture_gaussian(
-                &(l.weights_prior), l.weights[i]);
-            l.log_variational_posterior += _compute_log_prob_gaussian(
-                l.weights_mu[i], log1pf(expf(l.weights_rho[i])), l.weights[i]);
-        }
-
-        for (int i = 0; i < l.outputs; i++) {
-            l.log_prior += compute_log_prob_scale_mixture_gaussian(
-                &(l.biases_prior), l.biases[i]);
-            l.log_variational_posterior += _compute_log_prob_gaussian(
-                l.biases_mu[i], log1pf(expf(l.biases_rho[i])), l.biases[i]);
-        }        
+        l.sampling(l, sampling);    
     }
 }
 
@@ -353,6 +311,7 @@ float train_network_datum(network *net)
     return error;
 }
 
+// ADD for BBB
 float train_network_datum_bbb(network *net, bool sampling, int num_sample)
 {
     *net->seen += net->batch;
@@ -397,6 +356,7 @@ float train_network(network *net, data d)
     return (float)sum/(n*batch);
 }
 
+// ADD for BBB
 float train_network_bbb(network *net, data d, bool sampling, int num_sample)
 {
     assert(d.X.rows % net->batch == 0);

@@ -3,6 +3,8 @@
 #include <sys/time.h>
 #include <assert.h>
 
+const int num_sample =1;
+
 float *get_regression_values_bbb(char **labels, int n)
 {
     float *v = calloc(n, sizeof(float));
@@ -29,9 +31,7 @@ void train_classifier_bbb(char *datacfg, char *cfgfile, char *weightfile, int *g
     int seed = rand();
     for(i = 0; i < ngpus; ++i){
         srand(seed);
-#ifdef GPU
-        cuda_set_device(gpus[i]);
-#endif
+
         nets[i] = load_network(cfgfile, weightfile, clear);
         nets[i]->learning_rate *= ngpus;
     }
@@ -130,15 +130,7 @@ void train_classifier_bbb(char *datacfg, char *cfgfile, char *weightfile, int *g
         time = what_time_is_it_now();
 
         float loss = 0;
-#ifdef GPU
-        if(ngpus == 1){
-            loss = train_network(net, train);
-        } else {
-            loss = train_networks(nets, ngpus, train, 4);
-        }
-#else
-        loss = train_network(net, train);
-#endif
+        loss = train_network_bbb(net, train, 1, num_sample); //sampling True=1
         if(avg_loss == -1) avg_loss = loss;
         avg_loss = avg_loss*.9 + loss*.1;
         printf("%ld, %.3f: %f, %f avg, %f rate, %lf seconds, %ld images\n", get_current_batch(net), (float)(*net->seen)/N, loss, avg_loss, get_current_rate(net), what_time_is_it_now()-time, *net->seen);
@@ -358,7 +350,7 @@ void validate_classifier_full_bbb(char *datacfg, char *filename, char *weightfil
 }
 
 
-void validate_classifier_single(char *datacfg, char *filename, char *weightfile)
+void validate_classifier_single_bbb(char *datacfg, char *filename, char *weightfile)
 {
     int i, j;
     network *net = load_network(filename, weightfile, 0);
@@ -417,7 +409,7 @@ void validate_classifier_single(char *datacfg, char *filename, char *weightfile)
     }
 }
 
-void validate_classifier_multi(char *datacfg, char *cfg, char *weights)
+void validate_classifier_multi_bbb(char *datacfg, char *cfg, char *weights)
 {
     int i, j;
     network *net = load_network(cfg, weights, 0);
@@ -479,7 +471,7 @@ void validate_classifier_multi(char *datacfg, char *cfg, char *weights)
     }
 }
 
-void try_classifier(char *datacfg, char *cfgfile, char *weightfile, char *filename, int layer_num)
+void try_classifier_bbb(char *datacfg, char *cfgfile, char *weightfile, char *filename, int layer_num)
 {
     network *net = load_network(cfgfile, weightfile, 0);
     set_batch_network(net, 1);
@@ -527,9 +519,6 @@ void try_classifier(char *datacfg, char *cfgfile, char *weightfile, char *filena
         for(i = 0; i < l.c; ++i){
             if(l.rolling_mean) printf("%f %f %f\n", l.rolling_mean[i], l.rolling_variance[i], l.scales[i]);
         }
-#ifdef GPU
-        cuda_pull_array(l.output_gpu, l.output, l.outputs);
-#endif
         for(i = 0; i < l.outputs; ++i){
             printf("%f\n", l.output[i]);
         }
@@ -715,7 +704,7 @@ void test_classifier_bbb(char *datacfg, char *cfgfile, char *weightfile, int tar
     }
 }
 
-void run_classifier(int argc, char **argv)
+void run_classifier_bbb(int argc, char **argv)
 {
     if(argc < 4){
         fprintf(stderr, "usage: %s %s [train/test/valid] [cfg] [weights (optional)]\n", argv[0], argv[1]);
@@ -736,16 +725,15 @@ void run_classifier(int argc, char **argv)
     char *filename = (argc > 6) ? argv[6]: 0;
     char *layer_s = (argc > 7) ? argv[7]: 0;
     int layer = layer_s ? atoi(layer_s) : -1;
-    if(0==strcmp(argv[2], "predict")) predict_classifier(data, cfg, weights, filename, top);
-    else if(0==strcmp(argv[2], "fout")) file_output_classifier(data, cfg, weights, filename);
-    else if(0==strcmp(argv[2], "try")) try_classifier(data, cfg, weights, filename, atoi(layer_s));
-    else if(0==strcmp(argv[2], "train")) train_classifier(data, cfg, weights, gpus, ngpus, clear);
-    else if(0==strcmp(argv[2], "test")) test_classifier(data, cfg, weights, layer);
-    else if(0==strcmp(argv[2], "valid")) validate_classifier_single(data, cfg, weights);
-    else if(0==strcmp(argv[2], "validmulti")) validate_classifier_multi(data, cfg, weights);
-    else if(0==strcmp(argv[2], "valid10")) validate_classifier_10(data, cfg, weights);
-    else if(0==strcmp(argv[2], "validcrop")) validate_classifier_crop(data, cfg, weights);
-    else if(0==strcmp(argv[2], "validfull")) validate_classifier_full(data, cfg, weights);
+    if(0==strcmp(argv[2], "predict")) predict_classifier_bbb(data, cfg, weights, filename, top);
+    else if(0==strcmp(argv[2], "try")) try_classifier_bbb(data, cfg, weights, filename, atoi(layer_s));
+    else if(0==strcmp(argv[2], "train")) train_classifier_bbb(data, cfg, weights, gpus, ngpus, clear);
+    else if(0==strcmp(argv[2], "test")) test_classifier_bbb(data, cfg, weights, layer);
+    else if(0==strcmp(argv[2], "valid")) validate_classifier_single_bbb(data, cfg, weights);
+    else if(0==strcmp(argv[2], "validmulti")) validate_classifier_multi_bbb(data, cfg, weights);
+    else if(0==strcmp(argv[2], "valid10")) validate_classifier_10_bbb(data, cfg, weights);
+    else if(0==strcmp(argv[2], "validcrop")) validate_classifier_crop_bbb(data, cfg, weights);
+    else if(0==strcmp(argv[2], "validfull")) validate_classifier_full_bbb(data, cfg, weights);
 }
 
 

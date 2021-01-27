@@ -11,6 +11,7 @@
 #include "batchnorm_layer.h"
 #include "blas.h"
 #include "connected_layer.h"
+#include "bayesconnected_layer.h"
 #include "deconvolutional_layer.h"
 #include "convolutional_layer.h"
 #include "cost_layer.h"
@@ -70,6 +71,8 @@ LAYER_TYPE string_to_layer_type(char * type)
     if (strcmp(type, "[rnn]")==0) return RNN;
     if (strcmp(type, "[conn]")==0
             || strcmp(type, "[connected]")==0) return CONNECTED;
+    if (strcmp(type, "[bayesconn]")==0
+            || strcmp(type, "[bayesconnected]")==0) return BAYESCONNECTED; // ADD
     if (strcmp(type, "[max]")==0
             || strcmp(type, "[maxpool]")==0) return MAXPOOL;
     if (strcmp(type, "[reorg]")==0) return REORG;
@@ -266,6 +269,19 @@ layer parse_connected(list *options, size_params params)
     layer l = make_connected_layer(params.batch, params.inputs, output, activation, batch_normalize, params.net->adam);
     return l;
 }
+
+// ADDED for BBB
+layer parse_bayesconnected(list *options, size_params params)
+{
+    int output = option_find_int(options, "output",1);
+    char *activation_s = option_find_str(options, "activation", "logistic");
+    ACTIVATION activation = get_activation(activation_s);
+    int batch_normalize = option_find_int_quiet(options, "batch_normalize", 0);
+
+    layer l = make_bayesconnected_layer(params.batch, params.inputs, output, activation, batch_normalize, params.net->adam);
+    return l;
+}
+
 
 layer parse_softmax(list *options, size_params params)
 {
@@ -795,6 +811,8 @@ network *parse_network_cfg(char *filename)
             l = parse_crnn(options, params);
         }else if(lt == CONNECTED){
             l = parse_connected(options, params);
+        }else if(lt == BAYESCONNECTED){
+            l = parse_bayesconnected(options, params);
         }else if(lt == CROP){
             l = parse_crop(options, params);
         }else if(lt == COST){
@@ -1004,6 +1022,24 @@ void save_connected_weights(layer l, FILE *fp)
     }
 }
 
+// ADDED FOR BAYES 
+
+void save_bayesconnected_weights(layer l, FILE *fp) 
+{ 
+    //TODO: imprement save function. 
+    //fwrite(l.biases, sizeof(float), l.outputs, fp); 
+    //fwrite(l.weights, sizeof(float), l.outputs*l.inputs, fp);  
+    fwrite(l.biases_mu, sizeof(float), l.outputs, fp); 
+    fwrite(l.biases_rho, sizeof(float), l.outputs, fp); 
+    fwrite(l.weights_mu, sizeof(float), l.outputs*l.inputs, fp); 
+    fwrite(l.weights_rho, sizeof(float), l.outputs*l.inputs, fp); 
+    if (l.batch_normalize){ 
+        fwrite(l.scales, sizeof(float), l.outputs, fp); 
+        fwrite(l.rolling_mean, sizeof(float), l.outputs, fp); 
+        fwrite(l.rolling_variance, sizeof(float), l.outputs, fp); 
+    } 
+} 
+
 void save_weights_upto(network *net, char *filename, int cutoff)
 {
 #ifdef GPU
@@ -1031,7 +1067,9 @@ void save_weights_upto(network *net, char *filename, int cutoff)
             save_convolutional_weights(l, fp);
         } if(l.type == CONNECTED){
             save_connected_weights(l, fp);
-        } if(l.type == BATCHNORM){
+        } if(l.type == BAYESCONNECTED){
+            save_bayesconnected_weights(l, fp);
+        }if(l.type == BATCHNORM){
             save_batchnorm_weights(l, fp);
         } if(l.type == RNN){
             save_connected_weights(*(l.input_layer), fp);
@@ -1097,10 +1135,39 @@ void transpose_matrix(float *a, int rows, int cols)
 
 void load_connected_weights(layer l, FILE *fp, int transpose)
 {
-    fread(l.biases, sizeof(float), l.outputs, fp);
-    fread(l.weights, sizeof(float), l.outputs*l.inputs, fp);
+    //fread(l.biases, sizeof(float), l.outputs, fp); 
+    //fread(l.weights, sizeof(float), l.outputs*l.inputs, fp);  
+    fread(l.biases_mu, sizeof(float), l.outputs, fp);
+    fread(l.biases_rho, sizeof(float), l.outputs, fp);
+    fread(l.weights_mu, sizeof(float), l.outputs*l.inputs, fp);
+    fread(l.weights_rho, sizeof(float), l.outputs*l.inputs, fp);
     if(transpose){
         transpose_matrix(l.weights, l.inputs, l.outputs);
+    }
+    //printf("Biases: %f mean %f variance\n", mean_array(l.biases, l.outputs), variance_array(l.biases, l.outputs));
+    //printf("Weights: %f mean %f variance\n", mean_array(l.weights, l.outputs*l.inputs), variance_array(l.weights, l.outputs*l.inputs));
+    if (l.batch_normalize && (!l.dontloadscales)){
+        fread(l.scales, sizeof(float), l.outputs, fp);
+        fread(l.rolling_mean, sizeof(float), l.outputs, fp);
+        fread(l.rolling_variance, sizeof(float), l.outputs, fp);
+        //printf("Scales: %f mean %f variance\n", mean_array(l.scales, l.outputs), variance_array(l.scales, l.outputs));
+        //printf("rolling_mean: %f mean %f variance\n", mean_array(l.rolling_mean, l.outputs), variance_array(l.rolling_mean, l.outputs));
+        //printf("rolling_variance: %f mean %f variance\n", mean_array(l.rolling_variance, l.outputs), variance_array(l.rolling_variance, l.outputs));
+    }
+#ifdef GPU
+    if(gpu_index >= 0){
+        push_connected_layer(l);
+    }
+#endif
+}
+
+void load_bayesconnected_weights(layer l, FILE *fp, int transpose)
+{
+    fread(l.biases_mu, sizeof(float), l.outputs, fp);
+    fread(l.weights, sizeof(float), l.outputs*l.inputs, fp);
+    if(transpose){
+        printf("no transpose option in load BC weights")
+        //transpose_matrix(l.weights, l.inputs, l.outputs);
     }
     //printf("Biases: %f mean %f variance\n", mean_array(l.biases, l.outputs), variance_array(l.biases, l.outputs));
     //printf("Weights: %f mean %f variance\n", mean_array(l.weights, l.outputs*l.inputs), variance_array(l.weights, l.outputs*l.inputs));
@@ -1251,6 +1318,9 @@ void load_weights_upto(network *net, char *filename, int start, int cutoff)
         }
         if(l.type == CONNECTED){
             load_connected_weights(l, fp, transpose);
+        }
+        if(l.type == BAYESCONNECTED){
+            load_bayesconnected_weights(l, fp, transpose);
         }
         if(l.type == BATCHNORM){
             load_batchnorm_weights(l, fp);

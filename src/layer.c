@@ -66,7 +66,7 @@ void free_layer(layer l)
     if(l.bias_prior_updates) free(l.bias_prior_updates); 
     if(l.weights_eps) free(l.weights_eps); 
     if(l.biases_eps) free(l.biases_eps); 
-} 
+
 
 #ifdef GPU
     if(l.indexes_gpu)           cuda_free((float *)l.indexes_gpu);

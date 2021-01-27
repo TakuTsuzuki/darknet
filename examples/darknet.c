@@ -11,6 +11,7 @@ extern void run_detector(int argc, char **argv);
 extern void run_coco(int argc, char **argv);
 extern void run_nightmare(int argc, char **argv);
 extern void run_classifier(int argc, char **argv);
+extern void run_classifier_bbb(int argc, char **argv);
 extern void run_regressor(int argc, char **argv);
 extern void run_segmenter(int argc, char **argv);
 extern void run_isegmenter(int argc, char **argv);

@@ -1,6 +1,7 @@
 #include "bayesconnected_layer.h"
 #include "convolutional_layer.h"
 #include "batchnorm_layer.h"
+#include "distribution.h"
 #include "utils.h"
 #include "cuda.h"
 #include "blas.h"
@@ -139,6 +140,84 @@ layer make_bayesconnected_layer(int batch, int inputs, int outputs, ACTIVATION a
     return l; 
 } 
 
+void _accumulate_grad(layer l) {
+
+    float pi = M_PI;
+    float m1 = l.weights_prior.mu1;
+    float m2 = l.weights_prior.mu2;
+    float s1 = l.weights_prior.sigma1;
+    float s2 = l.weights_prior.sigma2;
+    float a  = l.weights_prior.alpha;
+    
+    for(int out_idx = 0; out_idx < l.outputs; out_idx++) {           
+        for(int in_idx = 0; in_idx < l.inputs; in_idx++) {
+            int w_idx = out_idx * l.inputs + in_idx;
+            
+            float w  = l.weights[w_idx];
+            float m  = l.weights_mu[w_idx];
+            float r  = l.weights_rho[w_idx];
+            float s  = log1pf(expf(r));
+            float gw = l.weight_updates[w_idx];
+            float e  = l.weights_eps[w_idx];
+
+            // (3) equation in the paper
+            float g1     = expf(-powf(w,2)/(2.0*s1*s1));
+            float g2     = expf(-powf(w,2)/(2.0*s2*s2));
+
+            float dprior_dw = -w*((a/powf(s1,3))*g1+((1.0-a)/powf(s2,3))*g2)/((a/s1)*g1+((1.0-a)/s2)*g2)/l.batch;
+        
+            float dpos_dw   = -e/s/l.batch;
+            float dpos_dmu  = e/s/l.batch; 
+            float dpos_ds   = (powf(e,2)-1)/s/l.batch;
+
+            float dloss_dw  = (dpos_dw - dprior_dw) + gw;
+            float dloss_dmu = dloss_dw + dpos_dmu;
+            float dloss_ds  = dloss_dw*e + dpos_ds;  
+
+            // (4) equation in the paper
+            float ds_dr  = 1 / (1 + expf(-r));
+            float dloss_drho = dloss_ds * ds_dr;
+
+            // accumulate each gradient for sampling
+            l.weight_updates_mu[w_idx]    += dloss_dmu;
+            l.weight_updates_rho[w_idx]   += dloss_drho;
+            l.weight_prior_updates[w_idx] += dprior_dw;
+        }
+    }
+
+    for(int b_idx = 0; b_idx < l.outputs; b_idx++) {
+        float b  = l.biases[b_idx];
+        float m  = l.biases_mu[b_idx];
+        float r  = l.biases_rho[b_idx];
+        float s  = log1pf(expf(r));
+        float gb = l.bias_updates[b_idx];
+        float e  = l.biases_eps[b_idx];
+
+        // (3) equation in the paper
+        float g1     = expf(-powf(b,2)/(2.0*s1*s1));
+        float g2     = expf(-powf(b,2)/(2.0*s2*s2));
+        
+        float dprior_db = -b*(a/powf(s1,3)*g1+(1-a)/powf(s2,3)*g2)/(a/s1*g1+(1-a)/s2*g2)/l.batch;
+ 
+        float dpos_db   = -e/s/l.batch;
+        float dpos_dmu  = e/s/l.batch; 
+        float dpos_ds   = (powf(e,2)-1)/s/l.batch;
+
+        float dloss_db  = (dpos_db - dprior_db) + gb;
+        float dloss_dmu = dloss_db + dpos_dmu;
+        float dloss_ds  = dloss_db*e + dpos_ds;  
+
+        // (4) equation in the paper
+        float ds_dr  = 1 / (1 + expf(-r));
+        float dloss_drho = dloss_ds * ds_dr;
+
+        // accumulate each gradient for sampling
+        l.bias_updates_mu[b_idx]    += dloss_dmu;
+        l.bias_updates_rho[b_idx]   += dloss_drho;
+        l.bias_prior_updates[b_idx] += dprior_db;
+    }
+}
+
 //ADDED for BBB 
 void sampling_bayesconnected_layer(layer l, bool sampling) 
 { 
@@ -251,7 +330,7 @@ void backward_bayesconnected_layer(layer l, network net)
     c = net.delta;
 
     if(c) gemm(0,0,m,n,k,1,a,k,b,n,1,c,n);
-    
+
     _accumulate_grad(l);
 }
 
@@ -290,82 +369,4 @@ void statistics_bayesconnected_layer(layer l)
     print_statistics(l.biases_mu, l.outputs);
     printf("Weights_mu ");
     print_statistics(l.weights_mu, l.outputs);
-}
-
-void _accumulate_grad(layer l) {
-
-    float pi = M_PI;
-    float m1 = l.weights_prior.mu1;
-    float m2 = l.weights_prior.mu2;
-    float s1 = l.weights_prior.sigma1;
-    float s2 = l.weights_prior.sigma2;
-    float a  = l.weights_prior.alpha;
-    
-    for(int out_idx = 0; out_idx < l.outputs; out_idx++) {           
-        for(int in_idx = 0; in_idx < l.inputs; in_idx++) {
-            int w_idx = out_idx * l.inputs + in_idx;
-            
-            float w  = l.weights[w_idx];
-            float m  = l.weights_mu[w_idx];
-            float r  = l.weights_rho[w_idx];
-            float s  = movitan_log1p(movitan_exp(r));
-            float gw = l.weight_updates[w_idx];
-            float e  = l.weights_eps[w_idx];
-
-            // (3) equation in the paper
-            float g1     = expf(-powf(w,2)/(2.0*s1*s1));
-            float g2     = expf(-powf(w,2)/(2.0*s2*s2));
-
-            float dprior_dw = -w*((a/powf(s1,3))*g1+((1.0-a)/powf(s2,3))*g2)/((a/s1)*g1+((1.0-a)/s2)*g2)/l.batch;
-        
-            float dpos_dw   = -e/s/l.batch;
-            float dpos_dmu  = e/s/l.batch; 
-            float dpos_ds   = (powf(e,2)-1)/s/l.batch;
-
-            float dloss_dw  = (dpos_dw - dprior_dw) + gw;
-            float dloss_dmu = dloss_dw + dpos_dmu;
-            float dloss_ds  = dloss_dw*e + dpos_ds;  
-
-            // (4) equation in the paper
-            float ds_dr  = 1 / (1 + expf(-r));
-            float dloss_drho = dloss_ds * ds_dr;
-
-            // accumulate each gradient for sampling
-            l.weight_updates_mu[w_idx]    += dloss_dmu;
-            l.weight_updates_rho[w_idx]   += dloss_drho;
-            l.weight_prior_updates[w_idx] += dprior_dw;
-        }
-    }
-
-    for(int b_idx = 0; b_idx < l.outputs; b_idx++) {
-        float b  = l.biases[b_idx];
-        float m  = l.biases_mu[b_idx];
-        float r  = l.biases_rho[b_idx];
-        float s  = log1pf(expf(r));
-        float gb = l.bias_updates[b_idx];
-        float e  = l.biases_eps[b_idx];
-
-        // (3) equation in the paper
-        float g1     = expf(-powf(b,2)/(2.0*s1*s1));
-        float g2     = expf(-powf(b,2)/(2.0*s2*s2));
-        
-        float dprior_db = -b*(a/powf(s1,3)*g1+(1-a)/powf(s2,3)*g2)/(a/s1*g1+(1-a)/s2*g2)/l.batch;
- 
-        float dpos_db   = -e/s/l.batch;
-        float dpos_dmu  = e/s/l.batch; 
-        float dpos_ds   = (powf(e,2)-1)/s/l.batch;
-
-        float dloss_db  = (dpos_db - dprior_db) + gb;
-        float dloss_dmu = dloss_db + dpos_dmu;
-        float dloss_ds  = dloss_db*e + dpos_ds;  
-
-        // (4) equation in the paper
-        float ds_dr  = 1 / (1 + expf(-r));
-        float dloss_drho = dloss_ds * ds_dr;
-
-        // accumulate each gradient for sampling
-        l.bias_updates_mu[b_idx]    += dloss_dmu;
-        l.bias_updates_rho[b_idx]   += dloss_drho;
-        l.bias_prior_updates[b_idx] += dprior_db;
-    }
 }

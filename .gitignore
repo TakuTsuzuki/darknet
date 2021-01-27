@@ -1,10 +1,13 @@
 *.o
 *.dSYM
 *.csv
+*.zip
 *.out
 *.png
 *.jpg
 *.pyc
+*.vscode
+
 old/
 mnist/
 data/
