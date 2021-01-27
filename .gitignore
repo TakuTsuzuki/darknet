@@ -7,6 +7,9 @@
 *.jpg
 *.pyc
 *.vscode
+*.weights
+*.a
+*.so
 
 old/
 mnist/
