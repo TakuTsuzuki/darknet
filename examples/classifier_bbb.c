@@ -3,8 +3,6 @@
 #include <sys/time.h>
 #include <assert.h>
 
-const int num_sample =1;
-
 float *get_regression_values_bbb(char **labels, int n)
 {
     float *v = calloc(n, sizeof(float));
@@ -20,7 +18,7 @@ float *get_regression_values_bbb(char **labels, int n)
 void train_classifier_bbb(char *datacfg, char *cfgfile, char *weightfile, int *gpus, int ngpus, int clear)
 {
     int i;
-
+    const int num_sample =3;
     float avg_loss = -1;
     char *base = basecfg(cfgfile);
     printf("%s\n", base);
@@ -716,7 +714,6 @@ void run_classifier_bbb(int argc, char **argv)
     int *gpus = read_intlist(gpu_list, &ngpus, gpu_index);
 
 
-    int cam_index = find_int_arg(argc, argv, "-c", 0);
     int top = find_int_arg(argc, argv, "-t", 0);
     int clear = find_arg(argc, argv, "-clear");
     char *data = argv[3];

@@ -1166,7 +1166,7 @@ void load_bayesconnected_weights(layer l, FILE *fp, int transpose)
     fread(l.biases_mu, sizeof(float), l.outputs, fp);
     fread(l.weights, sizeof(float), l.outputs*l.inputs, fp);
     if(transpose){
-        printf("no transpose option in load BC weights")
+        printf("no transpose option in load BC weights");
         //transpose_matrix(l.weights, l.inputs, l.outputs);
     }
     //printf("Biases: %f mean %f variance\n", mean_array(l.biases, l.outputs), variance_array(l.biases, l.outputs));

@@ -4,6 +4,7 @@
 #include "activations.h"
 #include "layer.h"
 #include "network.h"
+#include "distribution.h"
 
 layer make_bayesconnected_layer(int batch, int inputs, int outputs, ACTIVATION activation, int batch_normalize, int adam);
 

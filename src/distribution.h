@@ -6,3 +6,4 @@ float compute_log_prob_scale_mixture_gaussian(ScaleMixtureGaussian *dist, float 
 
 //おかしいので直す
 float _compute_log_prob_gaussian(float mu, float sigma, float x) ;
+float _compute_prob_gaussian(float mu, float sigma, float x) ; 

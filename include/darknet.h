@@ -848,11 +848,6 @@ size_t rand_size_t();
 float rand_normal();
 float rand_uniform(float min, float max);
 
-//ADDED for BBB
-void init_scale_mixture_gaussian(ScaleMixtureGaussian *smg, float mu1, float sigma1, float mu2, float sigma2, float alpha); 
-float compute_log_prob_gaussian(Gaussian *dist, float x); 
-float compute_log_prob_scale_mixture_gaussian(ScaleMixtureGaussian *dist, float x); 
-
 #ifdef __cplusplus
 }
 #endif
