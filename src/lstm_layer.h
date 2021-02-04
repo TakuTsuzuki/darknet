@@ -10,6 +10,7 @@ layer make_lstm_layer(int batch, int inputs, int outputs, int steps, int batch_n
 
 void forward_lstm_layer(layer l, network net); 
 void update_lstm_layer(layer l, update_args a);
+void backward_lstm_layer(layer l, network state);
 
 #ifdef GPU
 void forward_lstm_layer_gpu(layer l, network net);
