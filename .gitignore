@@ -21,6 +21,7 @@ convnet/
 decaf/
 submission/
 darknet
+darknet_mlp
 .fuse*
 
 # OS Generated #
