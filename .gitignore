@@ -13,7 +13,6 @@
 
 old/
 mnist/
-data/
 caffe/
 grasp/
 images/
@@ -21,8 +20,8 @@ opencv/
 convnet/
 decaf/
 submission/
-cfg/
 darknet
+darknet_mlp
 .fuse*
 
 # OS Generated #
@@ -31,3 +30,6 @@ ehthumbs.db
 Icon?
 Thumbs.db
 *.swp
+
+# for development environment
+.idea

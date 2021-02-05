@@ -81,9 +81,11 @@ layer make_lstm_layer(int batch, int inputs, int outputs, int steps, int batch_n
 
     l.output = calloc(outputs*batch*steps, sizeof(float));
     l.state = calloc(outputs*batch, sizeof(float));
+    l.delta = calloc(outputs*batch*steps, sizeof(float));
 
     l.forward = forward_lstm_layer;
     l.update = update_lstm_layer;
+    l.backward = backward_lstm_layer;
 
     l.prev_state_cpu =  calloc(batch*outputs, sizeof(float));
     l.prev_cell_cpu =   calloc(batch*outputs, sizeof(float));

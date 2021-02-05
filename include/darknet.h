@@ -643,6 +643,11 @@ typedef struct list{
     node *back;
 } list;
 
+typedef struct{
+    char *type;
+    list *options;
+} section;
+
 pthread_t load_data(load_args args);
 list *read_data_cfg(char *filename);
 list *read_cfg(char *filename);
@@ -728,6 +733,8 @@ int option_find_int(list *l, char *key, int def);
 int option_find_int_quiet(list *l, char *key, int def);
 
 network *parse_network_cfg(char *filename);
+network *make_mlp_single_network(list *sections);
+
 void save_weights(network *net, char *filename);
 void load_weights(network *net, char *filename);
 void save_weights_upto(network *net, char *filename, int cutoff);
