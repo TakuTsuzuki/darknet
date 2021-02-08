@@ -1,0 +1,6 @@
+classes = 3
+train   = data/iris/train.list
+valid   = data/iris/test.list
+labels  = data/iris/labels.txt
+backup  = backup/
+top     = 2

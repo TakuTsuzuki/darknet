@@ -127,7 +127,7 @@ void train_classifier_bbb(char *datacfg, char *cfgfile, char *weightfile, int *g
         printf("Loaded: %lf seconds\n", what_time_is_it_now()-time);
         time = what_time_is_it_now();
 
-        float loss = 0;
+        float loss = 0; // error
         loss = train_network_bbb(net, train, 1, num_sample); //sampling True=1
         if(avg_loss == -1) avg_loss = loss;
         avg_loss = avg_loss*.9 + loss*.1;

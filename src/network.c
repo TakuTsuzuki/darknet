@@ -192,7 +192,8 @@ void sampling_network(network *netp, bool sampling)
 {
     network net = *netp;
     int i;
-    for(i = 0; i < net.n; ++i){
+    //for(i = 0; i < net.n; ++i){
+    for(i = 0; i < net.n-1; ++i){
         net.index = i;
         layer l = net.layers[i];
         l.sampling(l, sampling);    
@@ -314,11 +315,15 @@ float train_network_datum(network *net)
 // ADD for BBB
 float train_network_datum_bbb(network *net, bool sampling, int num_sample)
 {
+    //printf("1\n");
     *net->seen += net->batch;
     net->train = 1;
     for(int s = 0; s < num_sample; s++){
+        //printf("2\n");
         sampling_network(net, sampling);
+        //printf("3\n");
         forward_network(net);
+        //printf("4\n");
         backward_network(net);
     }
     float error = *net->cost;
@@ -362,7 +367,6 @@ float train_network_bbb(network *net, data d, bool sampling, int num_sample)
     assert(d.X.rows % net->batch == 0);
     int batch = net->batch;
     int n = d.X.rows / batch;
-
     int i;
     float sum = 0;
     for(i = 0; i < n; ++i){
