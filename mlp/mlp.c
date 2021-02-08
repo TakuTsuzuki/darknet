@@ -436,18 +436,18 @@ void forward_hidden_layer(network *net, data d) {
 
 void test_mlp_hidden_layer_forward() {
     list *sections = make_cfg();
-    printf("started making MLP network.");
+    printf("started making MLP network.\n");
     network *net = make_mlp_single_network(sections);
-    printf("finished making MLP network.");
+    printf("finished making MLP network.\n");
 
     data train;
-    printf("started loading data.");
+    printf("started loading data.\n");
     train = load_iris_data();
-    printf("finished loading data.");
+    printf("finished loading data.\n");
 
-    printf("started forward test.");
+    printf("started forward test.\n");
     forward_hidden_layer(net, train);
-    printf("finished forward test.");
+    printf("finished forward test.\n");
 
     // print output
 
