@@ -7,7 +7,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifndef BAREMETAL
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+#endif
 
 list *get_paths(char *filename)
 {
@@ -42,6 +44,7 @@ char **get_random_paths_indexes(char **paths, int n, int m, int *indexes)
 char **get_random_paths(char **paths, int n, int m)
 {
     char **random_paths = calloc(n, sizeof(char*));
+#ifndef BAREMETAL
     int i;
     pthread_mutex_lock(&mutex);
     for(i = 0; i < n; ++i){
@@ -50,6 +53,7 @@ char **get_random_paths(char **paths, int n, int m)
         //if(i == 0) printf("%s\n", paths[index]);
     }
     pthread_mutex_unlock(&mutex);
+#endif
     return random_paths;
 }
 
@@ -1135,14 +1139,17 @@ void *load_thread(void *ptr)
 pthread_t load_data_in_thread(load_args args)
 {
     pthread_t thread;
+#ifndef BAREMETAL
     struct load_args *ptr = calloc(1, sizeof(struct load_args));
     *ptr = args;
     if(pthread_create(&thread, 0, load_thread, ptr)) error("Thread creation failed");
+#endif
     return thread;
 }
 
 void *load_threads(void *ptr)
 {
+#ifndef BAREMETAL
     int i;
     load_args args = *(load_args *)ptr;
     if (args.threads == 0) args.threads = 1;
@@ -1167,6 +1174,7 @@ void *load_threads(void *ptr)
     }
     free(buffers);
     free(threads);
+#endif
     return 0;
 }
 
@@ -1180,9 +1188,11 @@ void load_data_blocking(load_args args)
 pthread_t load_data(load_args args)
 {
     pthread_t thread;
+#ifndef BAREMETAL
     struct load_args *ptr = calloc(1, sizeof(struct load_args));
     *ptr = args;
     if(pthread_create(&thread, 0, load_threads, ptr)) error("Thread creation failed");
+#endif
     return thread;
 }
 
