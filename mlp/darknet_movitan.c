@@ -37,7 +37,7 @@ void darknet_movitan_hidden_forward(layer _l, float *x) {
     for (int batch_idx = 0; batch_idx < batch_size; batch_idx++) {
         // u = Wx+b
         // load vector A
-        // movitan_load_vector(x, A_SP_ADDR_START, vec_col_size_full, vec_col_size_partial);
+        movitan_load_vector(x, A_SP_ADDR_START, vec_col_size_full, vec_col_size_partial);
         printf("step 1");
 
         // load vector D
