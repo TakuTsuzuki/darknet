@@ -9,6 +9,10 @@
 #include "iris_loader.h"
 #include "config.h"
 
+#ifdef ACCELERATOR
+#include "connected_layer.h"
+#endif
+
 char *DATA_CFG[][2] = {
         {"classes", "3"},
         {"train", "train_path"},
@@ -100,15 +104,18 @@ void forward_hidden_layer(network *net, data d) {
     int i;
     for(i = 0; i < n; ++i){
         get_next_batch(d, batch, i*batch, net->input, net->truth);
-        // train_network_datum(net);
         *net->seen += net->batch;
         net->train = 1;
+#ifdef ACCELERATOR
+        layer l = net->layers[0];
+        forward_connected_layer_accelerator(l, *net);
+#else
         forward_network(net);
+#endif
     }
 }
 
 void test_mlp_hidden_layer_forward() {
-    // list *sections = make_cfg();
     list *sections = make_sample_network_config();
     printf("started making MLP network.\n");
     network *net = make_mlp_single_network(sections);
@@ -132,7 +139,6 @@ void test_mlp_hidden_layer_forward() {
 void train_iris_classifier()
 {
     int N = 75;
-    // list *sections = make_cfg();
     list *sections = make_sample_network_config();
     printf("started making MLP network.");
     network *net = make_mlp_single_network(sections);

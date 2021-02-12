@@ -38,9 +38,15 @@ layer make_connected_layer(int batch, int inputs, int outputs, ACTIVATION activa
     l.weights = calloc(outputs*inputs, sizeof(float));
     l.biases = calloc(outputs, sizeof(float));
 
+#ifndef ACCELERATOR
     l.forward = forward_connected_layer;
     l.backward = backward_connected_layer;
     l.update = update_connected_layer;
+#else
+    l.forward = forward_connected_layer_accelerator;
+    l.backward = backward_connected_layer_accelerator;
+    l.update = update_connected_layer;
+#endif
 
     //float scale = 1./sqrt(inputs);
     float scale = sqrt(2./inputs);
@@ -332,5 +338,119 @@ void backward_connected_layer_gpu(layer l, network net)
     c = net.delta_gpu;
 
     if(c) gemm_gpu(0,0,m,n,k,1,a,k,b,n,1,c,n);
+}
+#endif
+
+#ifdef ACCELERATOR
+#include "include/movitan.h"
+#include "include/movitan_utils.h"
+#include "include/movitan_params.h"
+void update_connected_layer_accelerator(layer l, update_args a)
+{
+    float learning_rate = a.learning_rate*l.learning_rate_scale;
+    float momentum = a.momentum;
+    float decay = a.decay;
+    int batch = a.batch;
+    axpy_cpu(l.outputs, learning_rate/batch, l.bias_updates, 1, l.biases, 1);
+    scal_cpu(l.outputs, momentum, l.bias_updates, 1);
+
+    if(l.batch_normalize){
+        axpy_cpu(l.outputs, learning_rate/batch, l.scale_updates, 1, l.scales, 1);
+        scal_cpu(l.outputs, momentum, l.scale_updates, 1);
+    }
+
+    axpy_cpu(l.inputs*l.outputs, -decay*batch, l.weights, 1, l.weight_updates, 1);
+    axpy_cpu(l.inputs*l.outputs, learning_rate/batch, l.weight_updates, 1, l.weights, 1);
+    scal_cpu(l.inputs*l.outputs, momentum, l.weight_updates, 1);
+}
+
+void forward_connected_layer_accelerator(layer _l, network net)
+{
+    printf("start forward.\n");
+    layer *l = &_l;
+    float *x = net.input;
+    // initializaiton
+    //init_array(l->u, l->batch_size, l->n_out);
+    //init_array(l->y, l->batch_size, l->n_out);
+    const uint32_t col_num = l->inputs;
+    const uint32_t row_num = l->outputs;
+    // const uint32_t batch_size = l->batch;
+    const uint32_t batch_size = 1;
+
+    const uint32_t vec_col_size_full    = col_num/DIM;
+    const uint32_t vec_col_size_partial = col_num%DIM;
+    const uint32_t vec_col_size = vec_col_size_full + (vec_col_size_partial != 0 ? 1 : 0);
+
+    const uint32_t vec_row_size_full    = row_num/DIM;
+    const uint32_t vec_row_size_partial = row_num%DIM;
+    const uint32_t vec_row_size = vec_row_size_full + (vec_row_size_partial != 0 ? 1 : 0);
+
+    if( batch_size > 1){
+        printf("not support yet minibatch");
+        exit(1);
+    }
+
+    printf("vec_col: full=%d, partial=%d, size=%d\n", vec_col_size_full, vec_col_size_partial, vec_col_size);
+    printf("vec_row: full=%d, partial=%d, size=%d\n", vec_row_size_full, vec_row_size_partial, vec_row_size);
+    for (int batch_idx = 0; batch_idx < batch_size; batch_idx++) {
+        // u = Wx+b
+        // load vector A
+        movitan_load_vector(x, A_SP_ADDR_START, vec_col_size_full, vec_col_size_partial);
+        printf("step 1");
+
+        // load vector D
+        movitan_load_vector(l->biases, D_SP_ADDR_START, vec_row_size_full, vec_row_size_partial);
+        printf("step 2");
+        // load matrix B
+        movitan_load_matrix_blocked(l->weights, B_SP_ADDR_START, col_num,
+                                    vec_col_size_full, vec_col_size_partial, vec_col_size,
+                                    vec_row_size_full, vec_row_size_partial, vec_row_size);
+        printf("step 3");
+
+        movitan_vec_col_mat_col_mul(A_SP_ADDR_START, B_SP_ADDR_START, C_SP_ADDR_START,
+                                    vec_col_size_full, vec_col_size_partial, vec_col_size,
+                                    vec_row_size_full, vec_row_size_partial, vec_row_size);
+        printf("step 4");
+
+        // add bias
+        movitan_fadd(C_SP_ADDR_START, D_SP_ADDR_START, C_SP_ADDR_START,vec_row_size);
+
+        //printf("Relu Start\n");
+        // do relu
+        movitan_relu(C_SP_ADDR_START, D_SP_ADDR_START, vec_row_size);
+
+        // store u & y
+        movitan_store_vector(l->delta, C_SP_ADDR_START, vec_row_size_full, vec_row_size_partial);
+        movitan_store_vector(l->output, D_SP_ADDR_START, vec_row_size_full, vec_row_size_partial);
+    }
+}
+
+void backward_connected_layer_accelerator(layer l, network net)
+{
+    gradient_array(l.output, l.outputs*l.batch, l.activation, l.delta);
+
+    if(l.batch_normalize){
+        backward_batchnorm_layer(l, net);
+    } else {
+        backward_bias(l.bias_updates, l.delta, l.batch, l.outputs, 1);
+    }
+
+    int m = l.outputs;
+    int k = l.batch;
+    int n = l.inputs;
+    float *a = l.delta;
+    float *b = net.input;
+    float *c = l.weight_updates;
+    gemm(1,0,m,n,k,1,a,m,b,n,1,c,n);
+
+    m = l.batch;
+    k = l.outputs;
+    n = l.inputs;
+
+    a = l.delta;
+    b = l.weights;
+    c = net.delta;
+
+    if(c) gemm(0,0,m,n,k,1,a,k,b,n,1,c,n);
 }
 #endif

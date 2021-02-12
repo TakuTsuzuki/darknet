@@ -19,5 +19,10 @@ void push_connected_layer(layer l);
 void pull_connected_layer(layer l);
 #endif
 
+#ifdef ACCELERATOR
+void forward_connected_layer_accelerator(layer _l, network net);
+void backward_connected_layer_accelerator(layer l, network net);
+void update_connected_layer_accelerator(layer l, update_args a);
 #endif
 
+#endif

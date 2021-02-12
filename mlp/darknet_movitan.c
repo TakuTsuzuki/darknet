@@ -2,9 +2,9 @@
 // #include "common_lib/dataset.h"
 // #include "common_lib/functional.h"
 // #include "common_lib/utils.h"
-#include "movitan_src/movitan.h"
-// #include "movitan_src/movitan_utils.h"
-// #include "movitan_src/movitan_params.h"
+#include "include/movitan.h"
+#include "include/movitan_utils.h"
+#include "include/movitan_params.h"
 
 #include "darknet_movitan.h"
 
@@ -66,3 +66,24 @@ void darknet_movitan_hidden_forward(layer _l, float *x) {
         movitan_store_vector(l->output, D_SP_ADDR_START, vec_row_size_full, vec_row_size_partial);
     }
 }
+
+/*
+float train_network_datum_movitan() {
+
+}
+
+float train_network_movitan() {
+    assert(d.X.rows % net->batch == 0);
+    int batch = net->batch;
+    int n = d.X.rows / batch;
+
+    int i;
+    float sum = 0;
+    for(i = 0; i < n; ++i){
+        get_next_batch(d, batch, i*batch, net->input, net->truth);
+        float err = train_network_datum_movitan(net);
+        sum += err;
+    }
+    return (float)sum/(n*batch);
+}
+ */

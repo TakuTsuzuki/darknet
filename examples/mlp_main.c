@@ -1,4 +1,4 @@
-#include "mlp.h"
+#include "../src/mlp.h"
 #include <stdio.h>
 
 int main(int argc, char **argv) {
