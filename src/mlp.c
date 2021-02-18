@@ -140,26 +140,26 @@ void train_iris_classifier()
 {
     int N = 75;
     list *sections = make_sample_network_config();
-    printf("started making MLP network.");
+    printf("started making MLP network.\n");
     network *net = make_mlp_single_network(sections);
-    printf("finished making MLP network.");
+    printf("finished making MLP network.\n");
 
     float avg_loss = -1;
     data train;
     while(get_current_batch(net) < net->max_batches || net->max_batches == 0) {
-        printf("started loading data.");
+        printf("started loading data.\n");
         train = load_iris_data(1);
-        printf("finished loading data.");
+        printf("finished loading data.\n");
 
-        printf("started training.");
+        printf("started training.\n");
         float loss = train_network(net, train);
-        printf("finished training.");
+        printf("finished training.\n");
 
         if(avg_loss == -1) avg_loss = loss;
         avg_loss = avg_loss*.9 + loss*.1;
         printf("%ld, %.3f: %f, %f avg, %f rate, %ld images\n", get_current_batch(net), (float)(*net->seen)/N, loss, avg_loss, get_current_rate(net), *net->seen);
     }
 
-    free_list(sections);
-    free_network(net);
+    // free_list(sections);
+    // free_network(net);
 }

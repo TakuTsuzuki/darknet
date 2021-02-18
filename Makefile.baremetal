@@ -36,7 +36,7 @@ LDFLAGS= -lm
 COMMON= -Iinclude/ -Isrc/ -Iexamples/ -I../
 # CFLAGS=-Wall -Wno-unused-result -Wno-unknown-pragmas -Wfatal-errors -fPIC -fno-common -fno-builtin-printf -specs=htif_nano.specs -specs=htif_wrap.specs -DBAREMETAL=1
 CFLAGS=-Wall -Wno-unused-result -Wno-unknown-pragmas -Wfatal-errors -fPIC -fno-common -specs=htif.specs -lm -mcmodel=medany -march=rv64gc -Wa,-march=rv64gcxhwacha -static -lgcc -std=gnu99 -DBAREMETAL=1
-SIM := ~/chipyard/sims/verilator/simulator-chipyard-MovitanRocketConfig
+SIM := ~/chipyard/sims/verilator/simulator-chipyard-MovitanRocketConfig-debug
 
 ifeq ($(OPENMP), 1) 
 CFLAGS+= -fopenmp
