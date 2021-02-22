@@ -965,6 +965,8 @@ network *make_mlp_single_network(list *sections)
             l = parse_crnn(options, params);
         }else if(lt == CONNECTED){
             l = parse_connected(options, params);
+        }else if(lt == BAYESCONNECTED){
+            l = parse_bayesconnected(options, params);
         }else if(lt == CROP){
             l = parse_crop(options, params);
         }else if(lt == COST){

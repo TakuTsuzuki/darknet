@@ -48,7 +48,7 @@ typedef struct{
 tree *read_tree(char *filename);
 
 typedef enum{
-    LOGISTIC, RELU, RELIE, LINEAR, RAMP, TANH, PLSE, LEAKY, ELU, LOGGY, STAIR, HARDTAN, LHTAN, SELU
+    LOGISTIC, RELU_, RELIE, LINEAR, RAMP, TANH, PLSE, LEAKY, ELU, LOGGY, STAIR, HARDTAN, LHTAN, SELU
 } ACTIVATION;
 
 typedef enum{
@@ -668,7 +668,7 @@ void copy_cpu(int N, float *X, int INCX, float *Y, int INCY);
 void scal_cpu(int N, float ALPHA, float *X, int INCX);
 void fill_cpu(int N, float ALPHA, float * X, int INCX);
 void normalize_cpu(float *x, float *mean, float *variance, int batch, int filters, int spatial);
-void softmax(float *input, int n, float temp, int stride, float *output);
+void softmax_(float *input, int n, float temp, int stride, float *output);
 
 int best_3d_shift_r(image a, image b, int min, int max);
 #ifdef GPU

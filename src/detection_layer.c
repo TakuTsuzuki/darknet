@@ -59,7 +59,7 @@ void forward_detection_layer(const detection_layer l, network net)
             int index = b*l.inputs;
             for (i = 0; i < locations; ++i) {
                 int offset = i*l.classes;
-                softmax(l.output + index + offset, l.classes, 1, 1,
+                softmax_(l.output + index + offset, l.classes, 1, 1,
                         l.output + index + offset);
             }
         }

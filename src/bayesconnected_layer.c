@@ -11,6 +11,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef ACCELERATOR
+#include "connected_layer.h"
+#endif
+
 layer make_bayesconnected_layer(int batch, int inputs, int outputs, ACTIVATION activation, int batch_normalize, int adam) 
 { 
     int i; 
@@ -34,12 +38,19 @@ layer make_bayesconnected_layer(int batch, int inputs, int outputs, ACTIVATION a
     l.weight_updates = calloc(inputs*outputs, sizeof(float)); 
     l.bias_updates = calloc(outputs, sizeof(float)); 
     l.weights = calloc(outputs*inputs, sizeof(float)); 
-    l.biases = calloc(outputs, sizeof(float)); 
+    l.biases = calloc(outputs, sizeof(float));
 
+#ifdef ACCELERATOR
+    l.forward = forward_connected_layer_accelerator;
+    l.backward = backward_connected_layer_accelerator;
+    l.update = update_bayesconnected_layer;
+    l.sampling = sampling_bayesconnected_layer;
+#else
     l.forward = forward_bayesconnected_layer; 
     l.backward = backward_bayesconnected_layer; 
     l.update = update_bayesconnected_layer; 
-    l.sampling = sampling_bayesconnected_layer; 
+    l.sampling = sampling_bayesconnected_layer;
+#endif
 
     // added for BBB 
     l.weights_mu = calloc(outputs*inputs, sizeof(float)); //重みガウス分布の平均  
