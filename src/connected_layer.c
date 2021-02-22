@@ -402,12 +402,23 @@ void forward_connected_layer_accelerator(layer _l, network net)
         movitan_fadd(C_SP_ADDR_START, D_SP_ADDR_START, C_SP_ADDR_START,vec_row_size);
 
         //printf("Relu Start\n");
-        // do relu
-        movitan_relu(C_SP_ADDR_START, D_SP_ADDR_START, vec_row_size);
+        // do activation
+        if (l->activation == RELU_) {
+            // do relu
+            movitan_relu(C_SP_ADDR_START, D_SP_ADDR_START, vec_row_size);
 
-        // store u & y
+            // store y
+            movitan_store_vector(l->output, D_SP_ADDR_START, vec_row_size_full, vec_row_size_partial);
+        } else {
+            // store y
+            movitan_store_vector(l->output, C_SP_ADDR_START, vec_row_size_full, vec_row_size_partial);
+
+            // do activation
+            activate_array(l->output, l->outputs*l->batch, l->activation);
+        }
+
+        // store u
         movitan_store_vector(l->delta, C_SP_ADDR_START, vec_row_size_full, vec_row_size_partial);
-        movitan_store_vector(l->output, D_SP_ADDR_START, vec_row_size_full, vec_row_size_partial);
     }
 }
 
