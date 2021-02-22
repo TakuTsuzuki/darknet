@@ -58,16 +58,19 @@ layer make_bayesconnected_layer(int batch, int inputs, int outputs, ACTIVATION a
 
     // initialization 
     float scale = sqrt(2./inputs); 
-
-    init_arrayuniform(l.weights, outputs*inputs, scale); 
+    float shift = 0;
+    init_arrayzero(l.weights, outputs*inputs); 
     init_arrayzero(l.biases, outputs); 
 
     //initialization ADDED for BBB 
     // init random uniform  
-    init_arrayuniform(l.weights_mu, outputs*inputs, scale); 
-    init_arrayuniform(l.weights_rho, outputs*inputs, scale); 
-    init_arrayuniform(l.biases_mu, outputs, scale); 
-    init_arrayuniform(l.biases_rho, outputs, scale); 
+    float scale_mu = 0.2;
+    float scale_rho = 0.5;
+    float shift_rho = -4.5;
+    init_arrayuniform(l.weights_mu, outputs*inputs, scale_mu, shift); 
+    init_arrayuniform(l.weights_rho, outputs*inputs, scale_rho, shift_rho); 
+    init_arrayuniform(l.biases_mu, outputs, scale_mu, shift); 
+    init_arrayuniform(l.biases_rho, outputs, scale_rho, shift_rho); 
 
     // init zero 
     // y(activationかける前のarray), grad_x に対応する配列は存在しない 

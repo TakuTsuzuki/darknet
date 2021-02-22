@@ -18,7 +18,7 @@ float *get_regression_values_bbb(char **labels, int n)
 void train_classifier_bbb(char *datacfg, char *cfgfile, char *weightfile, int *gpus, int ngpus, int clear)
 {
     int i;
-    const int num_sample =3;
+    const int num_sample =1; // ADDED FOR BBB 
     float avg_loss = -1;
     char *base = basecfg(cfgfile);
     printf("%s\n", base);
@@ -47,7 +47,7 @@ void train_classifier_bbb(char *datacfg, char *cfgfile, char *weightfile, int *g
     char *train_list = option_find_str(options, "train", "data/train.list");
     char *tree = option_find_str(options, "tree", 0);
     if (tree) net->hierarchy = read_tree(tree);
-    int classes = option_find_int(options, "classes", 2);
+    int classes = option_find_int(options, "classes", 3);
 
     char **labels = 0;
     if(!tag){
@@ -127,7 +127,7 @@ void train_classifier_bbb(char *datacfg, char *cfgfile, char *weightfile, int *g
         printf("Loaded: %lf seconds\n", what_time_is_it_now()-time);
         time = what_time_is_it_now();
 
-        float loss = 0; // error
+        float loss = 0; 
         loss = train_network_bbb(net, train, 1, num_sample); //sampling True=1
         if(avg_loss == -1) avg_loss = loss;
         avg_loss = avg_loss*.9 + loss*.1;
@@ -641,8 +641,8 @@ void test_classifier_bbb(char *datacfg, char *cfgfile, char *weightfile, int tar
 
     list *options = read_data_cfg(datacfg);
 
-    char *test_list = option_find_str(options, "test", "data/test.list");
-    int classes = option_find_int(options, "classes", 2);
+    char *test_list = option_find_str(options, "test", "data/iris/test.list");
+    int classes = option_find_int(options, "classes", 3);
 
     list *plist = get_paths(test_list);
 

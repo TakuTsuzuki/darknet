@@ -732,10 +732,12 @@ void init_arrayzero(float *array, int N)
     } 
 } 
 
-void init_arrayuniform(float *array, int N, float scale) 
+void init_arrayuniform(float *array, int N, float scale, float shift) 
 { 
     for (int i = 0; i < N; i++){ 
-        array[i] = scale*rand_uniform(-1, 1); 
+        array[i] = scale*rand_uniform(-1, 1) - shift; 
     } 
 } 
+
+
 
